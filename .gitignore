@@ -46,3 +46,9 @@ target/
 # OS-specific
 .DS_Store
 Thumbs.db
+
+### Frontend ###
+/frontend/node_modules/
+/frontend/build/
+/frontend/dist/
+.DS_Store
