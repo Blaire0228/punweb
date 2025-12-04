@@ -32,9 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-# Ignore Spring Boot application configuration (contains passwords)
-src/main/resources/application.properties
-
 # IntelliJ IDEA
 .idea/
 *.iml
