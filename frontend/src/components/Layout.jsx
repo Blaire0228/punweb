@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, User } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import squirrelLogo from '../assets/squirrelLogo.png';
+import userLogo from '../assets/userLogo.png';
 
 const Layout = ({ children }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -18,8 +20,14 @@ const Layout = ({ children }) => {
       {/* 導航列 */}
       <header className={`${colors.headerGreen} p-4 flex justify-between items-center text-white shadow-md sticky top-0 z-50`}>
         <Link to="/" className="flex items-center gap-2 font-bold text-lg md:text-xl tracking-wide select-none hover:opacity-90 transition">
-          <span className="text-2xl">🐿️</span>
-          要台灣人放棄諧音梗已經 taiwan 啦！
+
+          <img
+            src={squirrelLogo}
+            alt="Logo"
+            className="w-12 h-12 object-contain"
+            />
+            要台灣人放棄諧音梗已經 taiwan 啦！
+
         </Link>
         
         <div className="flex gap-3 relative">
@@ -31,7 +39,11 @@ const Layout = ({ children }) => {
             className="p-1 hover:bg-white/20 rounded-full transition"
             onClick={() => setShowMenu(!showMenu)}
           >
-            <User size={24} />
+            <img
+                        src={userLogo}
+                        alt="user Logo"
+                        className="w-12 h-12 object-contain"
+                        />
           </button>
 
           {/* 右側下拉選單 */}
