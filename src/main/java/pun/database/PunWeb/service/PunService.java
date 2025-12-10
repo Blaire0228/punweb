@@ -1,12 +1,13 @@
 package pun.database.PunWeb.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import pun.database.PunWeb.model.Pun;
-import pun.database.PunWeb.repository.PunRepository;
-
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import pun.database.PunWeb.model.Pun;
+import pun.database.PunWeb.repository.PunRepository;
 
 @Service
 public class PunService {
@@ -38,5 +39,15 @@ public class PunService {
     }
     public void deletePun(Integer id) {
         punRepository.deleteById(id);
+    }
+
+    // [新增功能] 根據創建者 ID 獲取諧音梗列表
+    public List<Pun> getPunsByCreatedBy(Integer createdBy) {
+        return punRepository.findByCreatedBy(createdBy);
+    }
+
+    // [新增功能] 獲取所有不重複的標籤
+    public List<String> getAllDistinctTags() {
+        return punRepository.findDistinctTags();
     }
 }

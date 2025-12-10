@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useContext } from 'react'; // 1. 引入 useContext
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../App'; // 2. 引入 AuthContext
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  
+  const { login } = useContext(AuthContext); // 3. 獲取 login 函式
+
   const handleLogin = async (e) => {
     e.preventDefault();
     // 呼叫 Java Spring Boot Login API
     console.log("登入送出");
+    
+    // [新增] 模擬登入成功，設定使用者 ID 為 1
+    login(1); 
+    
     navigate('/');
   };
 
