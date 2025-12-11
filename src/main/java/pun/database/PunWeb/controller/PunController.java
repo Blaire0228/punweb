@@ -15,13 +15,22 @@ public class PunController {
     @Autowired
     private PunService punService;
 
-    @GetMapping public List<Pun> getAllpuns() {
+    @GetMapping
+    public List<Pun> getAllPuns() {
         return punService.getAllPuns();
     }
 
     @GetMapping("/{id}")
     public Pun getPunById(@PathVariable Integer id) {
         return punService.getPunById(id);
+    }
+
+    @GetMapping("/search")
+    public List<Pun> search(
+            @RequestParam(required = false) List<Integer> tags,
+            @RequestParam(required = false) String keyword
+    ) {
+        return punService.search(tags, keyword);
     }
 
     @PostMapping

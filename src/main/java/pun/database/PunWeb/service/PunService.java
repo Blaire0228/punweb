@@ -39,4 +39,21 @@ public class PunService {
     public void deletePun(Integer id) {
         punRepository.deleteById(id);
     }
+
+    public List<Pun> search(List<Integer> tagIds, String keyword) {
+
+        boolean noTags = (tagIds == null || tagIds.isEmpty());
+        boolean noKeyword = (keyword == null || keyword.isBlank());
+
+        if (noTags && noKeyword)
+            return punRepository.findAll();
+
+        if (noTags)
+            return punRepository.findByContentContainingIgnoreCase(keyword);
+
+        if (noKeyword)
+            return punRepository.findByTagIds(tagIds);
+
+        return punRepository.findByTagIdsAndKeyword(tagIds, keyword);
+    }
 }

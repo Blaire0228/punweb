@@ -1,94 +1,172 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, Filter } from 'lucide-react'; // 假設你有 Filter icon
 import Layout from '../components/Layout';
 import PunCard from '../components/PunCard';
 
 const HomePage = () => {
   const navigate = useNavigate();
 
-  // 1. 定義狀態：puns (資料), loading (載入中), searchTerm (搜尋關鍵字)
+  // 狀態管理
   const [puns, setPuns] = useState([]);
+  const [allTags, setAllTags] = useState([]); // 儲存後端回傳的所有標籤選項
+  const [selectedTagIds, setSelectedTagIds] = useState([]); // 使用者勾選的標籤 ID
+  const [showTagFilter, setShowTagFilter] = useState(false); // 控制標籤選單是否顯示
+
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 2. 使用 useEffect 去後端抓資料
+  // 1. 初始載入：抓笑話 + 抓標籤清單
   useEffect(() => {
-    fetch('http://localhost:8080/puns')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('網路回應不正常');
-        }
-        return response.json();
-      })
+    fetchPuns();      // 預設抓全部
+    fetchTags();      // 抓標籤選項
+  }, []);
+
+  const fetchTags = () => {
+    fetch('http://localhost:8080/tags')
+      .then(res => res.json())
+      .then(data => setAllTags(data))
+      .catch(err => console.error("無法取得標籤:", err));
+  };
+
+  // 2. 核心搜尋功能 (呼叫後端 API)
+  const fetchPuns = (keyword = "", tagIds = []) => {
+    setLoading(true);
+
+    // 建構 Query String
+    // 例如: http://localhost:8080/puns/search?keyword=哈哈&tags=1,2
+    const params = new URLSearchParams();
+
+    if (keyword) params.append("keyword", keyword);
+
+    // 如果有勾選標籤，加到參數中
+    if (tagIds.length > 0) {
+      params.append("tags", tagIds.join(","));
+    }
+
+    // 決定要打哪個 API：如果完全沒參數就打 getAll，有參數就打 search
+    const url = (keyword === "" && tagIds.length === 0)
+      ? 'http://localhost:8080/puns'
+      : `http://localhost:8080/puns/search?${params.toString()}`;
+
+    fetch(url)
+      .then(res => res.json())
       .then(data => {
-        console.log("從後端獲取的資料:", data);
-        setPuns(data); // 更新資料狀態
-        setLoading(false); // 關閉載入中狀態
+        setPuns(data);
+        setLoading(false);
       })
       .catch(error => {
         console.error("無法取得資料:", error);
-        setLoading(false); // 發生錯誤也要關閉 loading，不然會一直轉圈圈
+        setLoading(false);
       });
-  }, []); // 空陣列代表只在第一次載入時執行
+  };
 
-  // 3. 處理搜尋 (這裡先做簡單的「前端篩選」)
-  // 如果有輸入關鍵字，就過濾 puns；如果沒有，就顯示全部
-  const displayedPuns = puns.filter(pun =>
-    pun.content.toLowerCase().includes(searchTerm.toLowerCase())
-    // 注意：如果你的後端資料有 title 欄位，也可以加上 || pun.title.includes(...)
-  );
-
+  // 3. 處理搜尋表單送出
   const handleSearch = (e) => {
     e.preventDefault();
-    console.log("正在搜尋:", searchTerm);
-    // 因為上面已經用了 displayedPuns 即時過濾，這裡其實不需要額外邏輯
-    // 但如果要改接「後端搜尋 API」，就會寫在這裡
+    // 這裡同時把「目前的搜尋字」和「目前勾選的標籤」送給後端
+    fetchPuns(searchTerm, selectedTagIds);
+  };
+
+  // 4. 處理標籤勾選
+  const handleTagChange = (tagId) => {
+    setSelectedTagIds(prev => {
+      const newTags = prev.includes(tagId)
+        ? prev.filter(id => id !== tagId) // 取消勾選
+        : [...prev, tagId];               // 新增勾選
+      return newTags;
+    });
   };
 
   return (
     <Layout>
-      {/* 搜尋欄 */}
-      <form onSubmit={handleSearch} className="relative mb-10 group">
-        <input
-          type="text"
-          placeholder="輸入關鍵字搜尋笑話..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-4 pl-6 rounded-full border-2 border-gray-300 shadow-sm text-lg focus:outline-none focus:border-[#8AB65D] focus:ring-1 focus:ring-[#8AB65D] transition"
-        />
-        <button
-          type="submit"
-          className="absolute right-1 top-1 bottom-1 bg-[#8AB65D] w-16 rounded-full flex items-center justify-center text-white hover:opacity-90 transition"
-        >
-          <Search />
-        </button>
-      </form>
+      {/* 搜尋區塊 */}
+      <div className="mb-10">
+        <form onSubmit={handleSearch} className="relative group flex gap-2">
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="輸入關鍵字搜尋..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-4 pl-6 rounded-full border-2 border-gray-300 focus:border-[#8AB65D] focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-2 bottom-2 bg-[#8AB65D] w-12 rounded-full text-white flex items-center justify-center hover:opacity-90"
+            >
+              <Search size={20} />
+            </button>
+          </div>
 
-      {/* 列表區域 */}
+          {/* 篩選按鈕 */}
+          <button
+            type="button"
+            onClick={() => setShowTagFilter(!showTagFilter)}
+            className={`p-4 rounded-full border-2 ${showTagFilter ? 'bg-gray-100 border-[#8AB65D]' : 'border-gray-300'} hover:bg-gray-50`}
+          >
+            <Filter size={20} className={selectedTagIds.length > 0 ? "text-[#8AB65D]" : "text-gray-500"} />
+          </button>
+        </form>
+
+        {/* 標籤勾選介面 (點擊漏斗後顯示) */}
+        {showTagFilter && (
+          <div className="mt-4 p-4 bg-white rounded-xl shadow-lg border border-gray-100">
+            <h3 className="text-sm font-bold text-gray-500 mb-2">篩選標籤:</h3>
+            <div className="flex flex-wrap gap-2">
+              {allTags.map(tag => (
+                <label
+                  key={tag.id}
+                  className={`cursor-pointer px-3 py-1 rounded-full border text-sm transition select-none
+                    ${selectedTagIds.includes(tag.id)
+                      ? 'bg-[#8AB65D] text-white border-[#8AB65D]'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-[#8AB65D]'}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="hidden" // 隱藏原生 checkbox，用樣式做按鈕感
+                    checked={selectedTagIds.includes(tag.id)}
+                    onChange={() => handleTagChange(tag.id)}
+                  />
+                  {tag.name}
+                </label>
+              ))}
+            </div>
+            {/* 這裡可以加一個立即套用按鈕，或者讓使用者回去按搜尋 */}
+            <div className="mt-2 text-right">
+                <button
+                    onClick={handleSearch} // 點擊直接觸發搜尋
+                    className="text-xs text-[#8AB65D] font-bold hover:underline"
+                >
+                    套用篩選
+                </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 列表顯示 */}
       <section>
         <h2 className="text-lg font-bold mb-4 text-gray-700">
-          {searchTerm ? `搜尋結果 (${displayedPuns.length} 筆)` : "熱門諧音梗"}
+          搜尋結果
         </h2>
 
-        {/* 4. 根據 Loading 狀態顯示不同內容 */}
         {loading ? (
-          <div className="text-center py-10 text-gray-500">資料載入中...</div>
+          <div className="text-center py-10 text-gray-500">載入中...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {displayedPuns.length > 0 ? (
-              displayedPuns.map(pun => (
+            {puns.length > 0 ? (
+              puns.map(pun => (
                 <PunCard
                   key={pun.id}
                   id={pun.id}
-                  title={pun.title || `${pun.content}`} // 如果後端沒回傳 title，暫時顯示 ID
-                  tags={pun.tags}
-                  isStarred={pun.isStarred || false} // 預設給 false
+                  title={pun.content}
+                  tags={pun.tags} // 現在後端會正確回傳 List<Tag>
                   onClick={() => navigate(`/detail/${pun.id}`)}
                 />
               ))
             ) : (
-              <p className="text-gray-500">找不到相關的笑話。</p>
+              <p className="text-gray-500">找不到符合條件的笑話。</p>
             )}
           </div>
         )}
