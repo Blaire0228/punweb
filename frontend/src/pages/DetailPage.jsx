@@ -13,7 +13,6 @@ const DetailPage = () => {
 
   // 4. 頁面載入時，去跟後端要這筆資料
   useEffect(() => {
-    // 記得確認你的後端 Port 是 8080
     fetch(`http://localhost:8080/puns/${id}`)
       .then(response => {
         if (!response.ok) {
@@ -65,12 +64,22 @@ const DetailPage = () => {
               {pun.title || `${pun.content}`}
             </h1>
 
-            {/* 標籤區：因為後端還沒有 Tags 欄位，我們先顯示假的或隱藏 */}
+            {/* 標籤區 */}
             <div className="flex flex-wrap gap-3">
-                {/* 這裡先寫死，等你後端加了 tags 欄位後，改成 pun.tags?.map(...) */}
-                <span className="bg-white px-4 py-1.5 rounded-md shadow-sm text-gray-500 text-sm font-medium border border-gray-100">
-                  {pun.title || `${pun.tags}`}
+              {Array.isArray(pun.tags) && pun.tags.length > 0 ? (
+                pun.tags.map(tag => (
+                  <span
+                    key={tag.id}
+                    className="bg-white px-4 py-1.5 rounded-md shadow-sm text-gray-500 text-sm font-medium border border-gray-100"
+                  >
+                    #{tag.name}
+                  </span>
+                ))
+              ) : (
+                <span className="bg-white px-4 py-1.5 rounded-md shadow-sm text-gray-400 text-sm font-medium border border-gray-100">
+                  無標籤
                 </span>
+              )}
             </div>
 
             {/* 內文 */}
@@ -84,7 +93,7 @@ const DetailPage = () => {
             </div>
           </div>
 
-          {/* 右側：圖片區 (後端目前沒圖片，先維持預設框) */}
+          {/* 右側：圖片區  */}
           <div className="w-full md:w-1/3 aspect-square md:aspect-auto md:h-auto bg-gray-300/50 rounded-lg flex items-center justify-center overflow-hidden relative group">
              <div className="text-gray-500 font-bold text-lg flex flex-col items-center">
                  <span>暫無圖片</span>

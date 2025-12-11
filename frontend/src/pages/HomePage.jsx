@@ -7,8 +7,12 @@ import PunCard from '../components/PunCard';
 const HomePage = () => {
   const navigate = useNavigate();
 
-  // 1. 定義狀態：puns (資料), loading (載入中), searchTerm (搜尋關鍵字)
+  // 狀態管理
   const [puns, setPuns] = useState([]);
+  const [allTags, setAllTags] = useState([]); // 儲存後端回傳的所有標籤選項
+  const [selectedTagIds, setSelectedTagIds] = useState([]); // 使用者勾選的標籤 ID
+  const [showTagFilter, setShowTagFilter] = useState(false); // 控制標籤選單是否顯示
+
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 // 標籤相關
@@ -17,15 +21,41 @@ const HomePage = () => {
     // 儲存使用者當前選擇的標籤，初始值為空字串
     const [selectedTag, setSelectedTag] = useState("");
 
-  // 2. 使用 useEffect 去後端抓資料
+  // 1. 初始載入：抓笑話 + 抓標籤清單
   useEffect(() => {
-    fetch('http://localhost:8080/puns')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('網路回應不正常');
-        }
-        return response.json();
-      })
+    fetchPuns();      // 預設抓全部
+    fetchTags();      // 抓標籤選項
+  }, []);
+
+  const fetchTags = () => {
+    fetch('http://localhost:8080/tags')
+      .then(res => res.json())
+      .then(data => setAllTags(data))
+      .catch(err => console.error("無法取得標籤:", err));
+  };
+
+  // 2. 核心搜尋功能 (呼叫後端 API)
+  const fetchPuns = (keyword = "", tagIds = []) => {
+    setLoading(true);
+
+    // 建構 Query String
+    // 例如: http://localhost:8080/puns/search?keyword=哈哈&tags=1,2
+    const params = new URLSearchParams();
+
+    if (keyword) params.append("keyword", keyword);
+
+    // 如果有勾選標籤，加到參數中
+    if (tagIds.length > 0) {
+      params.append("tags", tagIds.join(","));
+    }
+
+    // 決定要打哪個 API：如果完全沒參數就打 getAll，有參數就打 search
+    const url = (keyword === "" && tagIds.length === 0)
+      ? 'http://localhost:8080/puns'
+      : `http://localhost:8080/puns/search?${params.toString()}`;
+
+    fetch(url)
+      .then(res => res.json())
       .then(data => {
         console.log("從後端獲取的資料:", data);
         setPuns(data); // 更新資料狀態
@@ -40,7 +70,7 @@ const HomePage = () => {
       })
       .catch(error => {
         console.error("無法取得資料:", error);
-        setLoading(false); // 發生錯誤也要關閉 loading，不然會一直轉圈圈
+        setLoading(false);
       });
   }, []); // 空陣列代表只在第一次載入時執行
 
@@ -59,11 +89,21 @@ const HomePage = () => {
         return textMatches && tagMatches;
     });
 
+  // 3. 處理搜尋表單送出
   const handleSearch = (e) => {
     e.preventDefault();
-    console.log("正在搜尋:", searchTerm);
-    // 因為上面已經用了 displayedPuns 即時過濾，這裡其實不需要額外邏輯
-    // 但如果要改接「後端搜尋 API」，就會寫在這裡
+    // 這裡同時把「目前的搜尋字」和「目前勾選的標籤」送給後端
+    fetchPuns(searchTerm, selectedTagIds);
+  };
+
+  // 4. 處理標籤勾選
+  const handleTagChange = (tagId) => {
+    setSelectedTagIds(prev => {
+      const newTags = prev.includes(tagId)
+        ? prev.filter(id => id !== tagId) // 取消勾選
+        : [...prev, tagId];               // 新增勾選
+      return newTags;
+    });
   };
 
     const handleTagChange = (e) => { setSelectedTag(e.target.value); };
@@ -135,27 +175,25 @@ const HomePage = () => {
       {/* 列表區域 */}
       <section>
         <h2 className="text-lg font-bold mb-4 text-gray-700">
-          {searchTerm ? `搜尋結果 (${displayedPuns.length} 筆)` : "熱門諧音梗"}
+          搜尋結果
         </h2>
 
-        {/* 4. 根據 Loading 狀態顯示不同內容 */}
         {loading ? (
-          <div className="text-center py-10 text-gray-500">資料載入中...</div>
+          <div className="text-center py-10 text-gray-500">載入中...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {displayedPuns.length > 0 ? (
-              displayedPuns.map(pun => (
+            {puns.length > 0 ? (
+              puns.map(pun => (
                 <PunCard
                   key={pun.id}
                   id={pun.id}
-                  title={pun.title || `${pun.content}`} // 如果後端沒回傳 title，暫時顯示 ID
-                  tags={pun.tags}
-                  isStarred={pun.isStarred || false} // 預設給 false
+                  title={pun.content}
+                  tags={pun.tags} // 現在後端會正確回傳 List<Tag>
                   onClick={() => navigate(`/detail/${pun.id}`)}
                 />
               ))
             ) : (
-              <p className="text-gray-500">找不到相關的笑話。</p>
+              <p className="text-gray-500">找不到符合條件的笑話。</p>
             )}
           </div>
         )}
